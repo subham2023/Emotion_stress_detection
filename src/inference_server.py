@@ -8,19 +8,16 @@ with real-time emotion and stress analysis.
 import logging
 import os
 import base64
-import json
-from io import BytesIO
 from typing import Dict, Any, Optional
 
 import cv2
 import numpy as np
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from flask_socketio import SocketIO, emit, join_room, leave_room
+from flask_socketio import SocketIO, emit
 
 from config import (
     EMOTIONS,
-    IMAGE_SIZE_SMALL,
     LOG_FILE,
     LOG_LEVEL,
     LOG_FORMAT,

@@ -5,7 +5,6 @@ This module contains all configuration parameters including model architecture,
 training hyperparameters, file paths, and feature flags.
 """
 
-import os
 from pathlib import Path
 
 # ============================================================================

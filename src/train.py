@@ -24,8 +24,6 @@ from tensorflow.keras.callbacks import (
 
 from config import (
     BATCH_SIZE,
-    LEARNING_RATE,
-    LEARNING_RATE_DECAY,
     EPOCHS,
     EARLY_STOPPING_PATIENCE,
     REDUCE_LR_PATIENCE,
@@ -35,7 +33,6 @@ from config import (
     CHECKPOINT_MODE,
     CHECKPOINT_SAVE_BEST_ONLY,
     AUGMENTATION_CONFIG,
-    EMOTIONS,
     TRAINING_HISTORY_PATH,
     CHECKPOINT_PATH,
     LOGS_DIR,
@@ -43,7 +40,7 @@ from config import (
     LOG_LEVEL,
     LOG_FORMAT,
 )
-from model import ModelManager, create_model
+from model import ModelManager
 
 # ============================================================================
 # LOGGING SETUP
@@ -67,7 +64,6 @@ logger = logging.getLogger(__name__)
 class TrainingError(Exception):
     """Base exception for training errors."""
 
-    pass
 
 
 # ============================================================================

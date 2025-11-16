@@ -6,7 +6,7 @@ facial features, and temporal analysis.
 """
 
 import logging
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Optional
 from collections import deque
 from datetime import datetime
 
@@ -15,7 +15,6 @@ import numpy as np
 from config import (
     EMOTIONS,
     EMOTION_STRESS_WEIGHTS,
-    STRESS_LEVELS,
     get_stress_level,
     LOG_FILE,
     LOG_LEVEL,
@@ -44,7 +43,6 @@ logger = logging.getLogger(__name__)
 class StressAnalysisError(Exception):
     """Base exception for stress analysis errors."""
 
-    pass
 
 
 # ============================================================================

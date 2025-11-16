@@ -8,25 +8,19 @@ This module provides two model architectures:
 
 import logging
 from pathlib import Path
-from typing import Tuple, Optional, Dict, Any
+from typing import Tuple, Optional, Dict
 
-import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers, models, regularizers
 from tensorflow.keras.applications import ResNet50, MobileNetV2, VGG16
-from tensorflow.keras.preprocessing import image
 
 from config import (
     NUM_CLASSES,
-    EMOTIONS,
     IMAGE_SIZE_SMALL,
     IMAGE_SIZE_LARGE,
     IMAGE_CHANNELS,
     IMAGE_CHANNELS_RGB,
-    CUSTOM_CNN_MODEL_PATH,
-    TRANSFER_LEARNING_MODEL_PATH,
-    BEST_MODEL_PATH,
     LOG_FILE,
     LOG_LEVEL,
     LOG_FORMAT,
@@ -55,19 +49,16 @@ logger = logging.getLogger(__name__)
 class ModelError(Exception):
     """Base exception for model errors."""
 
-    pass
 
 
 class InvalidModelError(ModelError):
     """Raised when model is invalid or incompatible."""
 
-    pass
 
 
 class ModelNotFoundError(ModelError):
     """Raised when model file is not found."""
 
-    pass
 
 
 # ============================================================================
@@ -596,7 +587,7 @@ class ModelManager:
                 raise ModelError("No base model found in the model")
 
             # Unfreeze last num_layers
-            total_layers = len(base_model.layers)
+            len(base_model.layers)
             for layer in base_model.layers[-num_layers:]:
                 layer.trainable = True
 

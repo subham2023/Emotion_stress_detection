@@ -8,30 +8,23 @@ and dataset management for the emotion recognition pipeline.
 import logging
 import os
 from pathlib import Path
-from typing import List, Tuple, Optional, Dict, Any
+from typing import List, Tuple, Dict, Any
 
 import cv2
 import numpy as np
-from PIL import Image
 from tqdm import tqdm
 from sklearn.model_selection import train_test_split
 
 from config import (
     EMOTIONS,
-    NUM_CLASSES,
     IMAGE_SIZE_SMALL,
-    IMAGE_SIZE_LARGE,
-    IMAGE_CHANNELS,
-    IMAGE_CHANNELS_RGB,
     AUGMENTATION_CONFIG,
-    FACE_DETECTION_METHOD,
     FACE_DETECTION_MIN_CONFIDENCE,
     FACE_DETECTION_SCALE_FACTOR,
     FACE_DETECTION_MIN_NEIGHBORS,
     TRAIN_SPLIT,
     VALIDATION_SPLIT,
     TEST_SPLIT,
-    PROCESSED_DATA_DIR,
     LOG_FILE,
     LOG_LEVEL,
     LOG_FORMAT,
@@ -60,25 +53,21 @@ logger = logging.getLogger(__name__)
 class PreprocessingError(Exception):
     """Base exception for preprocessing errors."""
 
-    pass
 
 
 class InvalidImageError(PreprocessingError):
     """Raised when image is invalid or corrupted."""
 
-    pass
 
 
 class NoFaceDetectedError(PreprocessingError):
     """Raised when no face is detected in image."""
 
-    pass
 
 
 class DatasetError(PreprocessingError):
     """Raised when dataset has issues."""
 
-    pass
 
 
 # ============================================================================

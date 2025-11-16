@@ -16,7 +16,6 @@ import cv2
 sys.path.insert(0, str(Path(__file__).parent))
 
 from config import (
-    EMOTIONS,
     IMAGE_SIZE_SMALL,
     RAW_DATA_DIR,
     PROCESSED_DATA_DIR,
@@ -28,7 +27,6 @@ from data_preprocessing import (
     DataAugmentor,
     DatasetManager,
     create_sample_dataset,
-    InvalidImageError,
     NoFaceDetectedError,
 )
 

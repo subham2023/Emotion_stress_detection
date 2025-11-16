@@ -6,20 +6,14 @@ and real-time video prediction with visualization.
 """
 
 import logging
-from pathlib import Path
 from typing import List, Dict, Tuple, Optional, Any
 
 import cv2
 import numpy as np
-import tensorflow as tf
 from tensorflow import keras
 
 from config import (
     EMOTIONS,
-    IMAGE_SIZE_SMALL,
-    IMAGE_SIZE_LARGE,
-    IMAGE_CHANNELS,
-    IMAGE_CHANNELS_RGB,
     LOG_FILE,
     LOG_LEVEL,
     LOG_FORMAT,
@@ -54,13 +48,11 @@ logger = logging.getLogger(__name__)
 class PredictionError(Exception):
     """Base exception for prediction errors."""
 
-    pass
 
 
 class ModelLoadError(PredictionError):
     """Raised when model cannot be loaded."""
 
-    pass
 
 
 # ============================================================================
