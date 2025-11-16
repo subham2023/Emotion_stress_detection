@@ -39,8 +39,8 @@ services:
       - S3_BUCKET=${S3_BUCKET}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - MANUS_CLIENT_ID=${MANUS_CLIENT_ID}
-      - MANUS_CLIENT_SECRET=${MANUS_CLIENT_SECRET}
+      - JWT_SECRET=${JWT_SECRET}
+      - SESSION_SECRET=${SESSION_SECRET}
     networks:
       - emotion-stress-network
       - monitoring-network
