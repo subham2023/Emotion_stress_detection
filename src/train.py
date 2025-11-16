@@ -65,7 +65,6 @@ class TrainingError(Exception):
     """Base exception for training errors."""
 
 
-
 # ============================================================================
 # CUSTOM CALLBACKS
 # ============================================================================
@@ -123,7 +122,9 @@ class PerformanceMonitor(Callback):
 
         # Check for NaN or Inf
         if np.isnan(current_loss) or np.isinf(current_loss):
-            logger.error(f"Epoch {epoch + 1}: Invalid loss value {current_loss}")
+            logger.error(
+                f"Epoch {epoch + 1}: Invalid loss value {current_loss}"
+            )
             self.model.stop_training = True
             return
 
@@ -176,8 +177,12 @@ class DataGeneratorManager:
 
         train_datagen = ImageDataGenerator(
             rotation_range=augmentation_config.get("rotation_range", 15),
-            width_shift_range=augmentation_config.get("width_shift_range", 0.1),
-            height_shift_range=augmentation_config.get("height_shift_range", 0.1),
+            width_shift_range=augmentation_config.get(
+                "width_shift_range", 0.1
+            ),
+            height_shift_range=augmentation_config.get(
+                "height_shift_range", 0.1
+            ),
             zoom_range=augmentation_config.get("zoom_range", 0.2),
             horizontal_flip=augmentation_config.get("horizontal_flip", True),
             fill_mode=augmentation_config.get("fill_mode", "nearest"),
@@ -187,7 +192,9 @@ class DataGeneratorManager:
         return train_datagen
 
     @staticmethod
-    def create_val_generator() -> tf.keras.preprocessing.image.ImageDataGenerator:
+    def create_val_generator() -> (
+        tf.keras.preprocessing.image.ImageDataGenerator
+    ):
         """
         Create validation data generator (no augmentation).
 
@@ -387,12 +394,16 @@ class TrainingManager:
                 callbacks = TrainingManager.create_callbacks()
 
             if class_weights is None:
-                class_weights = TrainingManager.calculate_class_weights(y_train)
+                class_weights = TrainingManager.calculate_class_weights(
+                    y_train
+                )
 
             if use_data_augmentation:
                 # Use data generators
-                train_datagen, val_datagen = DataGeneratorManager.create_generators(
-                    X_train, y_train, X_val, y_val, batch_size=batch_size
+                train_datagen, val_datagen = (
+                    DataGeneratorManager.create_generators(
+                        X_train, y_train, X_val, y_val, batch_size=batch_size
+                    )
                 )
 
                 train_generator = train_datagen.flow(
@@ -459,8 +470,12 @@ class TrainingManager:
 
             history_dict = {
                 "loss": [float(x) for x in history.history.get("loss", [])],
-                "accuracy": [float(x) for x in history.history.get("accuracy", [])],
-                "val_loss": [float(x) for x in history.history.get("val_loss", [])],
+                "accuracy": [
+                    float(x) for x in history.history.get("accuracy", [])
+                ],
+                "val_loss": [
+                    float(x) for x in history.history.get("val_loss", [])
+                ],
                 "val_accuracy": [
                     float(x) for x in history.history.get("val_accuracy", [])
                 ],
@@ -475,7 +490,9 @@ class TrainingManager:
             raise TrainingError(f"Failed to save training history: {str(e)}")
 
     @staticmethod
-    def load_training_history(input_path: str = None) -> Dict[str, List[float]]:
+    def load_training_history(
+        input_path: str = None,
+    ) -> Dict[str, List[float]]:
         """
         Load training history from JSON file.
 
@@ -546,7 +563,9 @@ def resume_training(
         model = ModelManager.load_model(model_path)
 
         # Create callbacks
-        callbacks = TrainingManager.create_callbacks(model_name="resumed_model")
+        callbacks = TrainingManager.create_callbacks(
+            model_name="resumed_model"
+        )
 
         # Train
         history = TrainingManager.train(

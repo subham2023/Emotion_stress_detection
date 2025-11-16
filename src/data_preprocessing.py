@@ -54,20 +54,16 @@ class PreprocessingError(Exception):
     """Base exception for preprocessing errors."""
 
 
-
 class InvalidImageError(PreprocessingError):
     """Raised when image is invalid or corrupted."""
-
 
 
 class NoFaceDetectedError(PreprocessingError):
     """Raised when no face is detected in image."""
 
 
-
 class DatasetError(PreprocessingError):
     """Raised when dataset has issues."""
-
 
 
 # ============================================================================
@@ -108,7 +104,9 @@ class FaceDetector:
 
     def _init_haar_cascade(self) -> None:
         """Initialize Haar Cascade classifier."""
-        cascade_path = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
+        cascade_path = (
+            cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
+        )
         self.cascade = cv2.CascadeClassifier(cascade_path)
 
         if self.cascade.empty():
@@ -128,7 +126,9 @@ class FaceDetector:
                 "MTCNN not installed. Install with: pip install mtcnn"
             )
 
-    def detect_faces(self, image: np.ndarray) -> List[Tuple[int, int, int, int]]:
+    def detect_faces(
+        self, image: np.ndarray
+    ) -> List[Tuple[int, int, int, int]]:
         """
         Detect faces in image.
 
@@ -153,7 +153,9 @@ class FaceDetector:
         except Exception as e:
             raise InvalidImageError(f"Face detection failed: {str(e)}")
 
-    def _detect_haar(self, image: np.ndarray) -> List[Tuple[int, int, int, int]]:
+    def _detect_haar(
+        self, image: np.ndarray
+    ) -> List[Tuple[int, int, int, int]]:
         """Detect faces using Haar Cascade."""
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         faces = self.cascade.detectMultiScale(
@@ -168,7 +170,9 @@ class FaceDetector:
 
         return [(int(x), int(y), int(w), int(h)) for x, y, w, h in faces]
 
-    def _detect_mtcnn(self, image: np.ndarray) -> List[Tuple[int, int, int, int]]:
+    def _detect_mtcnn(
+        self, image: np.ndarray
+    ) -> List[Tuple[int, int, int, int]]:
         """Detect faces using MTCNN."""
         rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         detections = self.detector.detect_faces(rgb_image)
@@ -422,7 +426,9 @@ class DataAugmentor:
         y_offset = (h - new_h) // 2
         x_offset = (w - new_w) // 2
 
-        output[y_offset : y_offset + new_h, x_offset : x_offset + new_w] = zoomed
+        output[y_offset : y_offset + new_h, x_offset : x_offset + new_w] = (
+            zoomed
+        )
 
         return output
 
@@ -452,10 +458,14 @@ class DataAugmentor:
                 augmented_images.append(DataAugmentor.rotate(image, angle))
 
         # Brightness
-        brightness_range = augmentation_config.get("brightness_range", [0.8, 1.2])
+        brightness_range = augmentation_config.get(
+            "brightness_range", [0.8, 1.2]
+        )
         for factor in np.linspace(brightness_range[0], brightness_range[1], 2):
             if factor != 1.0:
-                augmented_images.append(DataAugmentor.adjust_brightness(image, factor))
+                augmented_images.append(
+                    DataAugmentor.adjust_brightness(image, factor)
+                )
 
         # Flip
         if augmentation_config.get("horizontal_flip", True):
@@ -536,7 +546,9 @@ class DatasetManager:
         # Get emotion directories
         emotion_dirs = [d for d in data_path.iterdir() if d.is_dir()]
         if not emotion_dirs:
-            raise DatasetError(f"No emotion subdirectories found in {data_dir}")
+            raise DatasetError(
+                f"No emotion subdirectories found in {data_dir}"
+            )
 
         logger.info(f"Found {len(emotion_dirs)} emotion categories")
 
@@ -545,7 +557,9 @@ class DatasetManager:
             emotion_name = emotion_dir.name.lower()
 
             if emotion_name not in EMOTIONS:
-                logger.warning(f"Unknown emotion category: {emotion_name}, skipping")
+                logger.warning(
+                    f"Unknown emotion category: {emotion_name}, skipping"
+                )
                 continue
 
             emotion_label = EMOTIONS.index(emotion_name)
@@ -553,9 +567,13 @@ class DatasetManager:
                 emotion_dir.glob("*.[pP][nN][gG]")
             )
 
-            logger.info(f"Processing {emotion_name}: {len(image_files)} images")
+            logger.info(
+                f"Processing {emotion_name}: {len(image_files)} images"
+            )
 
-            for image_file in tqdm(image_files, desc=f"Loading {emotion_name}"):
+            for image_file in tqdm(
+                image_files, desc=f"Loading {emotion_name}"
+            ):
                 try:
                     # Load image
                     image = self.image_preprocessor.load_image(str(image_file))
@@ -567,11 +585,13 @@ class DatasetManager:
                     for face_bbox in faces:
                         try:
                             # Preprocess face
-                            face_image = self.image_preprocessor.preprocess_face(
-                                image,
-                                face_bbox,
-                                target_size=target_size,
-                                grayscale=grayscale,
+                            face_image = (
+                                self.image_preprocessor.preprocess_face(
+                                    image,
+                                    face_bbox,
+                                    target_size=target_size,
+                                    grayscale=grayscale,
+                                )
                             )
 
                             images.append(face_image)
@@ -579,10 +599,14 @@ class DatasetManager:
 
                             # Apply augmentation if enabled
                             if augment:
-                                augmented_faces = self.data_augmentor.augment_image(
-                                    face_image, AUGMENTATION_CONFIG
+                                augmented_faces = (
+                                    self.data_augmentor.augment_image(
+                                        face_image, AUGMENTATION_CONFIG
+                                    )
                                 )
-                                for aug_face in augmented_faces[1:]:  # Skip original
+                                for aug_face in augmented_faces[
+                                    1:
+                                ]:  # Skip original
                                     images.append(aug_face)
                                     labels.append(emotion_label)
 
@@ -592,7 +616,9 @@ class DatasetManager:
 
                 except (InvalidImageError, NoFaceDetectedError) as e:
                     error_count += 1
-                    logger.debug(f"Error processing image {image_file}: {str(e)}")
+                    logger.debug(
+                        f"Error processing image {image_file}: {str(e)}"
+                    )
 
         if not images:
             raise DatasetError(f"No valid images found in {data_dir}")
@@ -622,7 +648,9 @@ class DatasetManager:
         val_ratio: float = VALIDATION_SPLIT,
         test_ratio: float = TEST_SPLIT,
         random_state: int = 42,
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    ) -> Tuple[
+        np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray
+    ]:
         """
         Split dataset into train, validation, and test sets.
 
@@ -735,7 +763,9 @@ class DatasetManager:
 # ============================================================================
 
 
-def create_sample_dataset(output_dir: str, num_images_per_emotion: int = 10) -> None:
+def create_sample_dataset(
+    output_dir: str, num_images_per_emotion: int = 10
+) -> None:
     """
     Create a sample dataset for testing.
 

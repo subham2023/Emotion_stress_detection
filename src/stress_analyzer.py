@@ -44,7 +44,6 @@ class StressAnalysisError(Exception):
     """Base exception for stress analysis errors."""
 
 
-
 # ============================================================================
 # STRESS ANALYZER
 # ============================================================================
@@ -93,7 +92,9 @@ class StressAnalyzer:
                 )
 
             if not np.isclose(emotion_probs.sum(), 1.0, atol=0.01):
-                raise StressAnalysisError("Emotion probabilities must sum to 1.0")
+                raise StressAnalysisError(
+                    "Emotion probabilities must sum to 1.0"
+                )
 
             # Calculate weighted stress score
             stress_score = 0.0
@@ -115,10 +116,14 @@ class StressAnalyzer:
             return float(normalized_score)
 
         except Exception as e:
-            raise StressAnalysisError(f"Failed to calculate emotion stress: {str(e)}")
+            raise StressAnalysisError(
+                f"Failed to calculate emotion stress: {str(e)}"
+            )
 
     @staticmethod
-    def calculate_facial_tension(landmarks: Optional[Dict[str, float]]) -> float:
+    def calculate_facial_tension(
+        landmarks: Optional[Dict[str, float]],
+    ) -> float:
         """
         Calculate facial tension from landmarks.
 
@@ -229,7 +234,8 @@ class StressAnalyzer:
                 "dominant_emotion": dominant_emotion,
                 "dominant_emotion_prob": dominant_emotion_prob,
                 "emotion_probabilities": {
-                    EMOTIONS[i]: float(emotion_probs[i]) for i in range(len(EMOTIONS))
+                    EMOTIONS[i]: float(emotion_probs[i])
+                    for i in range(len(EMOTIONS))
                 },
             }
 
@@ -267,7 +273,9 @@ class StressAnalyzer:
         if len(stress_array) >= 2:
             recent_stress = np.mean(stress_array[-5:])
             older_stress = (
-                np.mean(stress_array[:-5]) if len(stress_array) > 5 else stress_array[0]
+                np.mean(stress_array[:-5])
+                if len(stress_array) > 5
+                else stress_array[0]
             )
             trend_diff = recent_stress - older_stress
 
@@ -456,7 +464,9 @@ class StressReportGenerator:
             text.append(f"  {level}: {count} ({pct:.1f}%)")
 
         # Overall assessment
-        text.append(f"\nOVERALL STRESS LEVEL: {report['overall_stress_level'].upper()}")
+        text.append(
+            f"\nOVERALL STRESS LEVEL: {report['overall_stress_level'].upper()}"
+        )
 
         text.append("\n" + "=" * 80)
 

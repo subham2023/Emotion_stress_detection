@@ -113,7 +113,9 @@ def get_mock_prediction():
                 else "high" if stress_score < 75 else "critical"
             )
         ),
-        "emotion_probabilities": {k: float(v) for k, v in emotion_probs.items()},
+        "emotion_probabilities": {
+            k: float(v) for k, v in emotion_probs.items()
+        },
         "faces_detected": 1,
     }
 
@@ -169,7 +171,9 @@ def predict_frame(frame: np.ndarray) -> Dict[str, Any]:
 @app.route("/health", methods=["GET"])
 def health():
     """Health check endpoint."""
-    return jsonify({"status": "healthy", "model_loaded": predictor is not None})
+    return jsonify(
+        {"status": "healthy", "model_loaded": predictor is not None}
+    )
 
 
 @app.route("/api/predict/image", methods=["POST"])
@@ -398,10 +402,14 @@ def handle_end_session(data):
                 else None
             ),
             "max_stress": (
-                np.max(session["stress_history"]) if session["stress_history"] else None
+                np.max(session["stress_history"])
+                if session["stress_history"]
+                else None
             ),
             "min_stress": (
-                np.min(session["stress_history"]) if session["stress_history"] else None
+                np.min(session["stress_history"])
+                if session["stress_history"]
+                else None
             ),
         }
 

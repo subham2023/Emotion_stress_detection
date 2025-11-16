@@ -50,15 +50,12 @@ class ModelError(Exception):
     """Base exception for model errors."""
 
 
-
 class InvalidModelError(ModelError):
     """Raised when model is invalid or incompatible."""
 
 
-
 class ModelNotFoundError(ModelError):
     """Raised when model file is not found."""
-
 
 
 # ============================================================================
@@ -457,7 +454,11 @@ class ModelManager:
             model.compile(
                 optimizer=opt,
                 loss=loss,
-                metrics=["accuracy", keras.metrics.Precision(), keras.metrics.Recall()],
+                metrics=[
+                    "accuracy",
+                    keras.metrics.Precision(),
+                    keras.metrics.Recall(),
+                ],
             )
 
             logger.info(
@@ -626,7 +627,11 @@ def create_model(
     try:
         if model_type == "custom_cnn":
             if input_shape is None:
-                input_shape = (IMAGE_SIZE_SMALL[0], IMAGE_SIZE_SMALL[1], IMAGE_CHANNELS)
+                input_shape = (
+                    IMAGE_SIZE_SMALL[0],
+                    IMAGE_SIZE_SMALL[1],
+                    IMAGE_CHANNELS,
+                )
             model = CustomCNNModel.build(
                 input_shape=input_shape, num_classes=num_classes
             )

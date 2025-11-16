@@ -49,10 +49,8 @@ class PredictionError(Exception):
     """Base exception for prediction errors."""
 
 
-
 class ModelLoadError(PredictionError):
     """Raised when model cannot be loaded."""
-
 
 
 # ============================================================================
@@ -142,10 +140,14 @@ class EmotionPredictor:
                     face_batch = np.expand_dims(face_image, axis=0)
 
                     # Predict
-                    emotion_probs = self.model.predict(face_batch, verbose=0)[0]
+                    emotion_probs = self.model.predict(face_batch, verbose=0)[
+                        0
+                    ]
 
                     # Analyze stress
-                    stress_result = self.stress_analyzer.analyze_frame(emotion_probs)
+                    stress_result = self.stress_analyzer.analyze_frame(
+                        emotion_probs
+                    )
 
                     # Get dominant emotion
                     dominant_emotion_idx = np.argmax(emotion_probs)
@@ -167,7 +169,9 @@ class EmotionPredictor:
                     results.append(result)
 
                 except (InvalidImageError, NoFaceDetectedError) as e:
-                    logger.warning(f"Error processing face {face_idx}: {str(e)}")
+                    logger.warning(
+                        f"Error processing face {face_idx}: {str(e)}"
+                    )
 
             if not results:
                 raise PredictionError("No valid faces detected in image")
@@ -259,10 +263,14 @@ class EmotionPredictor:
                     face_batch = np.expand_dims(face_image, axis=0)
 
                     # Predict
-                    emotion_probs = self.model.predict(face_batch, verbose=0)[0]
+                    emotion_probs = self.model.predict(face_batch, verbose=0)[
+                        0
+                    ]
 
                     # Analyze stress
-                    stress_result = self.stress_analyzer.analyze_frame(emotion_probs)
+                    stress_result = self.stress_analyzer.analyze_frame(
+                        emotion_probs
+                    )
 
                     # Get dominant emotion
                     dominant_emotion_idx = np.argmax(emotion_probs)
@@ -330,13 +338,17 @@ class EmotionPredictor:
             width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-            logger.info(f"Video: {frame_count} frames, {fps} FPS, {width}x{height}")
+            logger.info(
+                f"Video: {frame_count} frames, {fps} FPS, {width}x{height}"
+            )
 
             # Setup video writer if output path provided
             out = None
             if output_path:
                 fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-                out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+                out = cv2.VideoWriter(
+                    output_path, fourcc, fps, (width, height)
+                )
 
             # Process frames
             frame_results = []
@@ -374,7 +386,9 @@ class EmotionPredictor:
                         logger.info(f"Processed {processed_frames} frames")
 
                 except PredictionError as e:
-                    logger.debug(f"Frame {frame_idx} prediction failed: {str(e)}")
+                    logger.debug(
+                        f"Frame {frame_idx} prediction failed: {str(e)}"
+                    )
 
                 frame_idx += 1
 
@@ -428,7 +442,9 @@ class EmotionPredictor:
             cv2.rectangle(vis_image, (x, y), (x + w, y + h), color, 2)
 
             # Draw label
-            label = f"{result['dominant_emotion']} ({result['confidence']:.2f})"
+            label = (
+                f"{result['dominant_emotion']} ({result['confidence']:.2f})"
+            )
             cv2.putText(
                 vis_image,
                 label,
@@ -440,9 +456,7 @@ class EmotionPredictor:
             )
 
             # Draw stress level
-            stress_label = (
-                f"Stress: {result['stress_level']} ({result['stress_score']:.1f})"
-            )
+            stress_label = f"Stress: {result['stress_level']} ({result['stress_score']:.1f})"
             cv2.putText(
                 vis_image,
                 stress_label,

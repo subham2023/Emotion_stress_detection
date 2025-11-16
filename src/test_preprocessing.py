@@ -48,7 +48,9 @@ def test_face_detector():
 
         # Create a simple test image with face-like pattern
         test_image = np.zeros((200, 200, 3), dtype=np.uint8)
-        cv2.circle(test_image, (100, 100), 40, (255, 255, 255), -1)  # Face circle
+        cv2.circle(
+            test_image, (100, 100), 40, (255, 255, 255), -1
+        )  # Face circle
         cv2.circle(test_image, (85, 85), 5, (0, 0, 0), -1)  # Left eye
         cv2.circle(test_image, (115, 85), 5, (0, 0, 0), -1)  # Right eye
 
@@ -93,15 +95,21 @@ def test_image_preprocessor():
         face = preprocessor.preprocess_face(
             test_image, face_bbox, target_size=IMAGE_SIZE_SMALL
         )
-        assert face.shape == (48, 48), f"Expected shape (48, 48), got {face.shape}"
+        assert face.shape == (
+            48,
+            48,
+        ), f"Expected shape (48, 48), got {face.shape}"
         logger.info(f"✓ Face preprocessing works (output shape: {face.shape})")
 
         # Test histogram equalization
         gray_image = (
-            cv2.cvtColor(test_image, cv2.COLOR_BGR2GRAY).astype(np.float32) / 255.0
+            cv2.cvtColor(test_image, cv2.COLOR_BGR2GRAY).astype(np.float32)
+            / 255.0
         )
         equalized = preprocessor.equalize_histogram(gray_image)
-        assert equalized.shape == gray_image.shape, "Equalized image shape mismatch"
+        assert (
+            equalized.shape == gray_image.shape
+        ), "Equalized image shape mismatch"
         logger.info("✓ Histogram equalization works")
 
         logger.info("✓ Image preprocessor test passed\n")
@@ -127,12 +135,16 @@ def test_data_augmentor():
 
         # Test rotation
         rotated = augmentor.rotate(test_image, 15)
-        assert rotated.shape == test_image.shape, "Rotated image shape mismatch"
+        assert (
+            rotated.shape == test_image.shape
+        ), "Rotated image shape mismatch"
         logger.info("✓ Image rotation works")
 
         # Test flip
         flipped = augmentor.flip(test_image, horizontal=True)
-        assert flipped.shape == test_image.shape, "Flipped image shape mismatch"
+        assert (
+            flipped.shape == test_image.shape
+        ), "Flipped image shape mismatch"
         logger.info("✓ Image flip works")
 
         # Test brightness adjustment
@@ -153,7 +165,9 @@ def test_data_augmentor():
         # Test augmentation pipeline
         augmented = augmentor.augment_image(test_image, AUGMENTATION_CONFIG)
         assert len(augmented) > 1, "Should produce multiple augmented images"
-        logger.info(f"✓ Augmentation pipeline works (produced {len(augmented)} images)")
+        logger.info(
+            f"✓ Augmentation pipeline works (produced {len(augmented)} images)"
+        )
 
         logger.info("✓ Data augmentor test passed\n")
 
@@ -182,15 +196,21 @@ def test_dataset_manager():
         X = np.random.rand(100, 48, 48, 1).astype(np.float32)
         y = np.random.randint(0, 7, 100)
 
-        X_train, X_val, X_test, y_train, y_val, y_test = DatasetManager.split_dataset(
-            X, y, train_ratio=0.8, val_ratio=0.1, test_ratio=0.1
+        X_train, X_val, X_test, y_train, y_val, y_test = (
+            DatasetManager.split_dataset(
+                X, y, train_ratio=0.8, val_ratio=0.1, test_ratio=0.1
+            )
         )
 
         assert (
             X_train.shape[0] == 80
         ), f"Expected 80 train samples, got {X_train.shape[0]}"
-        assert X_val.shape[0] == 10, f"Expected 10 val samples, got {X_val.shape[0]}"
-        assert X_test.shape[0] == 10, f"Expected 10 test samples, got {X_test.shape[0]}"
+        assert (
+            X_val.shape[0] == 10
+        ), f"Expected 10 val samples, got {X_val.shape[0]}"
+        assert (
+            X_test.shape[0] == 10
+        ), f"Expected 10 test samples, got {X_test.shape[0]}"
         logger.info(f"✓ Dataset splitting works")
 
         # Test dataset saving
