@@ -1,0 +1,380 @@
+version: '3.8'
+
+services:
+  app:
+    image: ghcr.io/${REGISTRY_OWNER:-yourusername}/emotion-stress-detection:develop
+    hostname: emotion-stress-app-dev
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+        monitor: 30s
+      resources:
+        limits:
+          memory: 3G
+          cpus: '1.5'
+        reservations:
+          memory: 1.5G
+          cpus: '0.75'
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.emotion-stress-dev.rule=Host(`${DOMAIN:-dev.emotion-stress.local}`)
+        - traefik.http.routers.emotion-stress-dev.entrypoints=web
+        - traefik.http.services.emotion-stress-dev.loadbalancer.server.port=3000
+        - traefik.http.middlewares.emotion-stress-dev-headers.headers.customRequestHeaders.X-Forwarded-Proto=http
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=mysql://root:${MYSQL_ROOT_PASSWORD}@mysql:3306/${MYSQL_DATABASE}_dev
+      - REDIS_URL=redis://redis:6379/1
+      - PORT=3000
+      - S3_BUCKET=${S3_BUCKET_DEV}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - MANUS_CLIENT_ID=${MANUS_CLIENT_ID}
+      - MANUS_CLIENT_SECRET=${MANUS_CLIENT_SECRET}
+    networks:
+      - emotion-stress-dev-network
+    ports:
+      - "3000:3000"
+      - "9229:9229"  # Node.js debugging port
+    volumes:
+      # Mount source code for hot reloading
+      - ./client:/app/client
+      - ./server:/app/server
+      - ./shared:/app/shared
+      - ./src:/app/src
+      - ./drizzle:/app/drizzle
+      - ./package.json:/app/package.json
+      - ./tsconfig.json:/app/tsconfig.json
+      - ./vite.config.ts:/app/vite.config.ts
+      - ./drizzle.config.ts:/app/drizzle.config.ts
+    command: npm run dev
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 60s
+      timeout: 20s
+      retries: 3
+      start_period: 60s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  mysql:
+    image: mysql:8.0
+    hostname: emotion-stress-mysql-dev
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+      placement:
+        constraints:
+          - node.role == manager
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}_dev
+      - MYSQL_USER=${MYSQL_USER:-dev_user}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+    networks:
+      - emotion-stress-dev-network
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-dev-data:/var/lib/mysql
+      - ./config/mysql-dev.cnf:/etc/mysql/conf.d/custom.cnf:ro
+      - ./scripts/init-dev-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  redis:
+    image: redis:7-alpine
+    hostname: emotion-stress-redis-dev
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+        reservations:
+          memory: 128M
+          cpus: '0.1'
+      placement:
+        constraints:
+          - node.role == manager
+    command: redis-server --appendonly yes
+    networks:
+      - emotion-stress-dev-network
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-dev-data:/data
+      - ./config/redis-dev.conf:/usr/local/etc/redis/redis.conf:ro
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  nginx:
+    image: nginx:alpine
+    hostname: emotion-stress-nginx-dev
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.1'
+        reservations:
+          memory: 64M
+          cpus: '0.05'
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.nginx-dev.rule=Host(`nginx.${DOMAIN:-dev.emotion-stress.local}`)
+        - traefik.http.routers.nginx-dev.entrypoints=web
+        - traefik.http.services.nginx-dev.loadbalancer.server.port=80
+    networks:
+      - emotion-stress-dev-network
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+    volumes:
+      - nginx-dev-config:/etc/nginx/conf.d
+      - nginx-logs:/var/log/nginx
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 60s
+      timeout: 20s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Development tools
+  adminer:
+    image: adminer:latest
+    hostname: emotion-stress-adminer
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      resources:
+        limits:
+          memory: 64M
+          cpus: '0.1'
+        reservations:
+          memory: 32M
+          cpus: '0.05'
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.adminer-dev.rule=Host(`adminer.${DOMAIN:-dev.emotion-stress.local}`)
+        - traefik.http.routers.adminer-dev.entrypoints=web
+        - traefik.http.services.adminer-dev.loadbalancer.server.port=8080
+    networks:
+      - emotion-stress-dev-network
+    depends_on:
+      - mysql
+    ports:
+      - "8080:8080"
+    environment:
+      - ADMINER_DEFAULT_SERVER=mysql
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    hostname: emotion-stress-redis-commander
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      resources:
+        limits:
+          memory: 64M
+          cpus: '0.1'
+        reservations:
+          memory: 32M
+          cpus: '0.05'
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.redis-dev.rule=Host(`redis.${DOMAIN:-dev.emotion-stress.local}`)
+        - traefik.http.routers.redis-dev.entrypoints=web
+        - traefik.http.services.redis-dev.loadbalancer.server.port=8081
+    networks:
+      - emotion-stress-dev-network
+    depends_on:
+      - redis
+    ports:
+      - "8081:8081"
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+      - HTTP_USER=${REDIS_COMMANDER_USER:-admin}
+      - HTTP_PASSWORD=${REDIS_COMMANDER_PASSWORD:-admin123}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+  # Test runner (optional)
+  test-runner:
+    image: ghcr.io/${REGISTRY_OWNER:-yourusername}/emotion-stress-detection:develop
+    hostname: emotion-stress-test-runner
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: none
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+        reservations:
+          memory: 512M
+          cpus: '0.25'
+    networks:
+      - emotion-stress-dev-network
+    depends_on:
+      - mysql
+      - redis
+    volumes:
+      - ./client:/app/client
+      - ./server:/app/server
+      - ./shared:/app/shared
+      - ./src:/app/src
+      - ./drizzle:/app/drizzle
+      - ./package.json:/app/package.json
+      - ./tsconfig.json:/app/tsconfig.json
+    environment:
+      - NODE_ENV=test
+      - DATABASE_URL=mysql://root:${MYSQL_ROOT_PASSWORD}@mysql:3306/${MYSQL_DATABASE}_test
+      - REDIS_URL=redis://redis:6379/2
+    command: npm run test
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Development reverse proxy
+  traefik:
+    image: traefik:v3.0
+    hostname: emotion-stress-traefik-dev
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.15'
+        reservations:
+          memory: 64M
+          cpus: '0.1'
+      placement:
+        constraints:
+          - node.role == manager
+    command:
+      - "--api.dashboard=true"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.swarmMode=true"
+      - "--providers.docker.network=emotion-stress-dev-network"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--log.level=DEBUG"
+      - "--accesslog=true"
+      - "--global.sendAnonymousUsage=false"
+    networks:
+      - emotion-stress-dev-network
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/ping"]
+      interval: 60s
+      timeout: 20s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  emotion-stress-dev-network:
+    driver: overlay
+    attachable: true
+    labels:
+      - com.docker.stack.namespace=emotion-stress-dev
+
+volumes:
+  mysql-dev-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /var/lib/docker/volumes/emotion-stress-dev_mysql-dev-data/_data
+  redis-dev-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /var/lib/docker/volumes/emotion-stress-dev_redis-dev-data/_data
+  nginx-dev-config:
+    driver: local
+  nginx-logs:
+    driver: local
