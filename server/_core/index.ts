@@ -55,8 +55,8 @@ async function startServer() {
   app.get("/api/health/liveness", getLivenessStatus);
   app.get("/api/health/readiness", getReadinessStatus);
 
-  // OAuth callback under /api/oauth/callback
-  registerOAuthRoutes(app);
+  // Authentication routes
+  registerAuthRoutes(app);
 
   // tRPC API
   app.use(
