@@ -143,106 +143,342 @@ def export_to_onnx(model_path, output_path):
 
 ---
 
-## Docker Deployment
+## Docker Containerization
+
+The application is containerized using a multi-stage Docker build for optimized production deployment.
 
 ### Dockerfile
 
+The application uses a multi-stage build:
+
 ```dockerfile
-# Multi-stage build for optimized image
+# Stage 1: Frontend Build
+FROM node:20-alpine AS frontend-builder
+# Builds React frontend and TypeScript backend
 
-# Stage 1: Python ML backend
-FROM python:3.11-slim as ml-builder
+# Stage 2: Backend Build
+FROM node:20-alpine AS backend-builder
+# Builds TypeScript backend
 
-WORKDIR /app
-
-# Install dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy ML code
-COPY src/ ./src/
-COPY models/ ./models/
-
-# Stage 2: Node.js frontend
-FROM node:22-alpine as frontend-builder
-
-WORKDIR /app
-
-COPY package.json pnpm-lock.yaml ./
-RUN npm install -g pnpm && pnpm install --frozen-lockfile
-
-COPY client/ ./client/
-COPY server/ ./server/
-COPY drizzle/ ./drizzle/
-
-RUN pnpm build
-
-# Stage 3: Production image
-FROM node:22-alpine
-
-WORKDIR /app
-
-# Install Python runtime
-RUN apk add --no-cache python3 py3-pip
-
-# Copy from builders
-COPY --from=ml-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
-COPY --from=ml-builder /app/src ./src
-COPY --from=ml-builder /app/models ./models
-COPY --from=frontend-builder /app/dist ./dist
-COPY --from=frontend-builder /app/node_modules ./node_modules
-
-# Copy package files
-COPY package.json pnpm-lock.yaml ./
-
-# Expose ports
-EXPOSE 3000 5000
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-    CMD node -e "require('http').get('http://localhost:3000/health', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"
-
-# Start application
-CMD ["node", "dist/index.js"]
+# Stage 3: Runtime Container
+FROM python:3.11-slim
+# Combines all components with ML dependencies
 ```
 
-### Docker Compose
+**Key Features:**
+- Multi-stage build for minimal final image size
+- Includes Python ML dependencies (TensorFlow, OpenCV)
+- Health check endpoint at `/api/health`
+- Production-optimized with pnpm for fast dependency installation
 
+### Docker Compose Files
+
+#### Production (`docker-compose.yml`)
+- Full production stack with monitoring
+- Includes Nginx, Prometheus, Grafana
+- Persistent volumes for data
+- Health checks and restart policies
+- Resource limits and reservations
+
+#### Development (`docker-compose.dev.yml`)
+- Development configuration with hot reloading
+- Includes Adminer and Redis Commander
+- Debug ports enabled
+- Development-friendly logging
+
+---
+
+## Environment Configuration
+
+### Setup Instructions
+
+1. **Copy Environment Template**
+```bash
+cp config/.env.example .env
+```
+
+2. **Configure Production Environment**
+```bash
+cp config/production.env .env
+```
+
+3. **Configure Development Environment**
+```bash
+cp config/development.env .env.dev
+```
+
+### Required Environment Variables
+
+**Application:**
+- `NODE_ENV` - Environment (production/development)
+- `PORT` - Application port (default: 3000)
+- `DOMAIN` - Application domain for SSL certificates
+
+**Database:**
+- `MYSQL_ROOT_PASSWORD` - MySQL root password
+- `MYSQL_DATABASE` - Database name
+- `MYSQL_USER` - Application database user
+- `MYSQL_PASSWORD` - Application user password
+
+**Cache:**
+- `REDIS_PASSWORD` - Redis authentication password
+
+**Storage:**
+- `S3_BUCKET` - AWS S3 bucket name
+- `AWS_ACCESS_KEY_ID` - AWS access key
+- `AWS_SECRET_ACCESS_KEY` - AWS secret key
+- `AWS_REGION` - AWS region
+
+**Authentication:**
+- `MANUS_CLIENT_ID` - Manus OAuth client ID
+- `MANUS_CLIENT_SECRET` - Manus OAuth client secret
+
+**Monitoring:**
+- `GRAFANA_PASSWORD` - Grafana admin password
+
+---
+
+## Local Development Setup
+
+### Prerequisites
+- Docker and Docker Compose
+- Node.js 20+ (for local development)
+- Python 3.11 (for ML development)
+
+### Quick Start
+
+1. **Start Development Environment**
+```bash
+docker-compose -f docker-compose.dev.yml up --build
+```
+
+2. **Access Development Services**
+- Application: http://localhost:3000
+- Adminer (DB Admin): http://localhost:8080
+- Redis Commander: http://localhost:8081
+- Traefik Dashboard: http://localhost:8080
+
+3. **Development Features**
+- Hot reloading for frontend and backend
+- Debug port 9229 for Node.js debugging
+- Live database access via Adminer
+- Redis management via Redis Commander
+
+### Local Development without Docker
+
+1. **Install Dependencies**
+```bash
+# Node.js dependencies
+npm install -g pnpm
+pnpm install
+
+# Python dependencies
+pip install -r requirements.txt
+```
+
+2. **Start Application**
+```bash
+pnpm dev
+```
+
+---
+
+## Docker Swarm Deployment
+
+### Initialize Docker Swarm
+
+1. **Initialize Swarm Cluster**
+```bash
+./deploy/swarm-init.sh
+```
+
+2. **Deploy Production Stack**
+```bash
+./deploy/deploy-stack.sh
+```
+
+### Deployment Scripts
+
+**`deploy/swarm-init.sh`**
+- Initializes Docker Swarm cluster
+- Creates overlay networks
+- Sets up data directories
+- Configures firewall rules
+
+**`deploy/deploy-stack.sh`**
+- Deploys application stack
+- Supports production and development
+- Blue-green deployment support
+- Health checks and monitoring
+
+**`deploy/update-stack.sh`**
+- Performs rolling updates
+- Service management
+- Rollback capabilities
+
+**`deploy/remove-stack.sh`**
+- Graceful stack removal
+- Data backup before removal
+- Cleanup operations
+
+### Deployment Commands
+
+```bash
+# Deploy production
+./deploy/deploy-stack.sh -t production
+
+# Deploy development
+./deploy/deploy-stack.sh -t development
+
+# Update service with new image
+./deploy/update-stack.sh -i myrepo/app:v1.2.3
+
+# Perform rollback
+./deploy/update-stack.sh --rollback
+
+# Remove stack
+./deploy/remove-stack.sh
+
+# Show stack status
+./deploy/deploy-stack.sh -s
+```
+
+### Service Access Points
+
+After deployment:
+
+- **Application**: https://your-domain.com
+- **Grafana**: https://grafana.your-domain.com
+- **Prometheus**: https://prometheus.your-domain.com
+- **Traefik Dashboard**: http://localhost:8080
+
+---
+
+## CI/CD Pipeline
+
+### GitHub Actions Workflows
+
+**`.github/workflows/ci-cd.yml`**
+- Automated testing (Node.js and Python)
+- Docker image building and security scanning
+- Multi-architecture image support (AMD64, ARM64)
+- Automated deployment to staging/production
+- Environment-based deployments
+
+**`.github/workflows/security.yml`**
+- Container vulnerability scanning (Trivy)
+- Dependency security scanning (npm audit, safety)
+- Code security analysis (Semgrep)
+- Scheduled security scans
+- Automated issue creation for critical findings
+
+**`.github/workflows/release.yml`**
+- Automated releases based on tags
+- Semantic versioning support
+- Blue-green deployments
+- Rollback on failure
+- Release artifact generation
+
+### Pipeline Triggers
+
+**Automatic Triggers:**
+- Push to `main` branch → Production deployment
+- Push to `develop` branch → Staging deployment
+- Pull requests → Testing and validation
+- Schedule → Security scans
+
+**Manual Triggers:**
+- Workflow dispatch for testing
+- Manual release creation
+- On-demand security scans
+
+### Container Registry
+
+Images are pushed to GitHub Container Registry (ghcr.io):
+
+```bash
+# Pull latest image
+docker pull ghcr.io/username/emotion-stress-detection:latest
+
+# Pull specific version
+docker pull ghcr.io/username/emotion-stress-detection:v1.2.3
+```
+
+---
+
+## Health Monitoring
+
+### Health Check Endpoints
+
+**`/api/health`** - Comprehensive health check
+```json
+{
+  "status": "healthy",
+  "timestamp": "2024-11-16T12:00:00Z",
+  "uptime": 3600,
+  "version": "1.0.0",
+  "checks": {
+    "database": {"status": "pass"},
+    "redis": {"status": "pass"},
+    "storage": {"status": "pass"},
+    "ml": {"status": "pass"},
+    "websocket": {"status": "pass"},
+    "memory": {"status": "pass"},
+    "disk": {"status": "pass"}
+  },
+  "metrics": {
+    "responseTime": 45,
+    "memoryUsage": {...},
+    "cpuUsage": {...}
+  }
+}
+```
+
+**Individual Component Checks:**
+- `/api/health/database` - Database connectivity
+- `/api/health/redis` - Redis connectivity
+- `/api/health/storage` - File storage access
+- `/api/health/ml` - ML model status
+- `/api/health/websocket` - WebSocket status
+- `/api/health/liveness` - Liveness probe
+- `/api/health/readiness` - Readiness probe
+
+### Monitoring Stack
+
+**Prometheus**
+- Metrics collection at `/metrics`
+- Application performance metrics
+- Infrastructure metrics
+- Custom business metrics
+
+**Grafana**
+- Pre-configured dashboards
+- Real-time monitoring
+- Alert management
+- Historical analysis
+
+### Health Check Configuration
+
+**Docker Health Check:**
+```bash
+curl -f http://localhost:3000/api/health || exit 1
+```
+
+**Kubernetes Probes:**
 ```yaml
-version: '3.8'
+livenessProbe:
+  httpGet:
+    path: /api/health/liveness
+    port: 3000
+  initialDelaySeconds: 30
+  periodSeconds: 10
 
-services:
-  app:
-    build: .
-    ports:
-      - "3000:3000"
-    environment:
-      - DATABASE_URL=mysql://user:password@db:3306/emotion_detector
-      - NODE_ENV=production
-      - JWT_SECRET=${JWT_SECRET}
-    depends_on:
-      - db
-    restart: unless-stopped
-
-  db:
-    image: mysql:8.0
-    environment:
-      - MYSQL_DATABASE=emotion_detector
-      - MYSQL_USER=user
-      - MYSQL_PASSWORD=password
-      - MYSQL_ROOT_PASSWORD=root_password
-    volumes:
-      - db_data:/var/lib/mysql
-    restart: unless-stopped
-
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    restart: unless-stopped
-
-volumes:
-  db_data:
+readinessProbe:
+  httpGet:
+    path: /api/health/readiness
+    port: 3000
+  initialDelaySeconds: 5
+  periodSeconds: 5
 ```
 
 ---
