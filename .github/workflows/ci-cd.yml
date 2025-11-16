@@ -36,13 +36,8 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v3
-        with:
-          version: 10.4.1
-
       - name: Install Node.js dependencies
-        run: pnpm install --frozen-lockfile
+        run: npm ci
 
       - name: Install Python dependencies
         run: |
