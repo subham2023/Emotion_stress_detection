@@ -1,0 +1,62 @@
+[mysqld]
+# Development MySQL Configuration
+# Optimized for development environment
+
+# General Settings
+default-storage-engine = InnoDB
+default-authentication-plugin = mysql_native_password
+
+# Character Set
+character-set-server = utf8mb4
+collation-server = utf8mb4_unicode_ci
+
+# Memory Settings (lower for development)
+innodb_buffer_pool_size = 128M
+innodb_log_file_size = 32M
+innodb_flush_log_at_trx_commit = 2  # Less durable but faster for dev
+innodb_flush_method = O_DIRECT
+
+# Connection Settings
+max_connections = 50
+max_connect_errors = 100
+connect_timeout = 30
+wait_timeout = 600
+interactive_timeout = 600
+
+# Query Cache (enabled for development convenience)
+query_cache_type = 1
+query_cache_size = 32M
+
+# Slow Query Log (enabled for development debugging)
+slow_query_log = 1
+slow_query_log_file = /var/log/mysql/slow.log
+long_query_time = 1  # Lower threshold for development
+
+# Error Log
+log_error = /var/log/mysql/error.log
+
+# Binary Log (minimal for development)
+log_bin = /var/log/mysql/mysql-bin.log
+expire_logs_days = 1
+max_binlog_size = 50M
+
+# General Log (enabled for development debugging)
+general_log = 1
+general_log_file = /var/log/mysql/general.log
+
+# Security (relaxed for development)
+local_infile = 1
+skip-show-database = 0
+
+# Performance (development-friendly)
+sql_mode = "STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO"
+
+# Development specific settings
+sql_notes = 0  # Suppress notes
+bulk_insert_buffer_size = 64M
+
+[mysql]
+default-character-set = utf8mb4
+
+[client]
+default-character-set = utf8mb4
