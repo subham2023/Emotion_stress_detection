@@ -1,0 +1,312 @@
+name: Release
+
+on:
+  create:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., v1.2.3)'
+        required: true
+        type: string
+      prerelease:
+        description: 'Is this a prerelease?'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: emotion-stress-detection
+
+jobs:
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    outputs:
+      release_id: ${{ steps.create-release.outputs.id }}
+      upload_url: ${{ steps.create-release.outputs.upload_url }}
+      tag_name: ${{ steps.get-tag.outputs.tag }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get tag name
+        id: get-tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate release notes
+        id: generate-notes
+        run: |
+          # Get previous tag
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+
+          # Generate changelog
+          if [ -n "$PREVIOUS_TAG" ]; then
+            echo "## Changes since $PREVIOUS_TAG" > release-notes.md
+            echo "" >> release-notes.md
+            git log --pretty=format:"- %s (%h)" $PREVIOUS_TAG..HEAD >> release-notes.md
+          else
+            echo "## Initial Release" > release-notes.md
+            echo "" >> release-notes.md
+            echo "First release of Emotion & Stress Detection application" >> release-notes.md
+          fi
+
+          echo "" >> release-notes.md
+          echo "### 🐳 Docker Images" >> release-notes.md
+          echo "- \`ghcr.io/${{ github.repository }}:${{ steps.get-tag.outputs.tag }}\`" >> release-notes.md
+          echo "- \`ghcr.io/${{ github.repository }}:latest\`" >> release-notes.md
+
+          echo "" >> release-notes.md
+          echo "### 🚀 Quick Start" >> release-notes.md
+          echo '```bash' >> release-notes.md
+          echo "docker run -p 3000:3000 ghcr.io/${{ github.repository }}:${{ steps.get-tag.outputs.tag }}" >> release-notes.md
+          echo '```' >> release-notes.md
+
+      - name: Create GitHub Release
+        id: create-release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.get-tag.outputs.tag }}
+          release_name: Release ${{ steps.get-tag.outputs.tag }}
+          body_path: release-notes.md
+          draft: false
+          prerelease: ${{ github.event.inputs.prerelease || 'false' }}
+
+      - name: Upload release notes as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-notes-${{ steps.get-tag.outputs.tag }}
+          path: release-notes.md
+          retention-days: 30
+
+  build-release-images:
+    name: Build Release Docker Images
+    runs-on: ubuntu-latest
+    needs: create-release
+    strategy:
+      matrix:
+        platform: [linux/amd64, linux/arm64]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=tag
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: ${{ matrix.platform }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            VERSION=${{ needs.create-release.outputs.tag_name }}
+            BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+            VCS_REF=${{ github.sha }}
+
+      - name: Generate SBOM (Software Bill of Materials)
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            anchore/syft:latest \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.create-release.outputs.tag_name }} \
+            -o cyclonedx-json > sbom-${{ matrix.platform }}.json
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-${{ needs.create-release.outputs.tag_name }}-${{ matrix.platform }}
+          path: sbom-${{ matrix.platform }}.json
+          retention-days: 90
+
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [create-release, build-release-images]
+    if: startsWith(github.ref, 'refs/tags/v')
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to production with blue-green strategy
+        run: |
+          echo "Deploying version ${{ needs.create-release.outputs.tag_name }} to production..."
+
+          # Blue-green deployment script
+          # This is a placeholder - implement based on your infrastructure
+
+          echo "Current version: $(docker service ls --filter name=emotion-stress_app --format '{{.Image}}' || echo 'None')"
+          echo "New version: ghcr.io/${{ github.repository }}:${{ needs.create-release.outputs.tag_name }}"
+
+          # Implement your blue-green deployment logic here
+          # Example with Docker Swarm:
+          # docker service update \
+          #   --image ghcr.io/${{ github.repository }}:${{ needs.create-release.outputs.tag_name }} \
+          #   --update-parallelism 1 \
+          #   --update-delay 10s \
+          #   --update-failure-action rollback \
+          #   emotion-stress_app
+
+      - name: Health check after deployment
+        run: |
+          echo "Running health checks..."
+          # Wait for deployment to stabilize
+          sleep 60
+
+          # Health check script - implement based on your infrastructure
+          # curl -f https://your-domain.com/api/health || exit 1
+
+      - name: Run smoke tests
+        run: |
+          echo "Running smoke tests..."
+          # Implement smoke tests here
+          # This could include API tests, UI tests, etc.
+
+      - name: Update deployment documentation
+        run: |
+          echo "Updating deployment documentation..."
+
+          # Update DEPLOYMENT.md with current version info
+          sed -i "s/CURRENT_VERSION/${{ needs.create-release.outputs.tag_name }}/g" DEPLOYMENT.md
+
+          # Commit documentation update
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add DEPLOYMENT.md
+          git commit -m "docs: update deployment documentation for ${{ needs.create-release.outputs.tag_name }}" || echo "No changes to commit"
+
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          echo "Deployment failed. Initiating rollback..."
+          # Implement rollback logic here
+
+          # Example with Docker Swarm:
+          # docker service rollback emotion-stress_app
+
+      - name: Notify release status
+        uses: 8398a7/action-slack@v3
+        if: always()
+        with:
+          status: ${{ job.status }}
+          channel: '#releases'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+          text: |
+            Release ${{ needs.create-release.outputs.tag_name }} deployment ${{ job.status }}
+            Docker Image: ghcr.io/${{ github.repository }}:${{ needs.create-release.outputs.tag_name }}
+
+  promote-to-stable:
+    name: Promote to Stable
+    runs-on: ubuntu-latest
+    needs: [create-release, build-release-images, deploy-production]
+    if: success() && !startsWith(github.ref, 'refs/tags/v') || github.event.inputs.prerelease != 'true'
+
+    steps:
+      - name: Promote image as stable
+        run: |
+          echo "Promoting ${{ needs.create-release.outputs.tag_name }} to stable..."
+
+          # Tag the release as stable (latest)
+          docker buildx imagetools create \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.create-release.outputs.tag_name }} \
+            --tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:stable
+
+      - name: Update stable deployment
+        run: |
+          echo "Updating stable deployment to use new image..."
+          # Update your stable deployment to use the new stable tag
+
+  post-release:
+    name: Post-Release Tasks
+    runs-on: ubuntu-latest
+    needs: [create-release, build-release-images, deploy-production]
+    if: always()
+
+    steps:
+      - name: Create release archive
+        run: |
+          echo "Creating release archive..."
+
+          # Create archive of source code
+          git archive --format=tar.gz --prefix=emotion-stress-detection-${{ needs.create-release.outputs.tag_name }}/ HEAD > emotion-stress-detection-${{ needs.create-release.outputs.tag_name }}.tar.gz
+
+          # Create SHA256 checksum
+          sha256sum emotion-stress-detection-${{ needs.create-release.outputs.tag_name }}.tar.gz > emotion-stress-detection-${{ needs.create-release.outputs.tag_name }}.tar.gz.sha256
+
+      - name: Upload release assets
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+
+            // Upload source archive
+            const archiveBuffer = fs.readFileSync('emotion-stress-detection-${{ needs.create-release.outputs.tag_name }}.tar.gz');
+            await github.rest.repos.uploadReleaseAsset({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: ${{ needs.create-release.outputs.release_id }},
+              name: 'emotion-stress-detection-${{ needs.create-release.outputs.tag_name }}.tar.gz',
+              data: archiveBuffer.toString('base64'),
+              headers: {
+                'Content-Type': 'application/gzip',
+                'Content-Encoding': 'base64'
+              }
+            });
+
+            // Upload checksum
+            const checksumBuffer = fs.readFileSync('emotion-stress-detection-${{ needs.create-release.outputs.tag_name }}.tar.gz.sha256');
+            await github.rest.repos.uploadReleaseAsset({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: ${{ needs.create-release.outputs.release_id }},
+              name: 'emotion-stress-detection-${{ needs.create-release.outputs.tag_name }}.tar.gz.sha256',
+              data: checksumBuffer.toString()
+            });
+
+      - name: Schedule next release (if applicable)
+        run: |
+          echo "Scheduling maintenance and future release tasks..."
+          # This could trigger other workflows or create issues
+
+      - name: Cleanup old releases
+        run: |
+          echo "Cleaning up old releases..."
+          # Keep only the last 5 releases to save space
+          # Implement cleanup logic based on your needs
