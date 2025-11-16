@@ -55,7 +55,7 @@ jobs:
           pylint src/ || true
 
       - name: Run type checking
-        run: pnpm run check
+        run: npm run check
 
       - name: Run unit tests
         run: pnpm run test
