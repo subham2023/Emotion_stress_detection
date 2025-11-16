@@ -949,5 +949,258 @@ Key metrics to monitor:
 
 ---
 
+## Troubleshooting
+
+### Common Docker Issues
+
+**Build Fails with "Permission Denied"**
+```bash
+# Fix file permissions
+sudo chown -R $USER:$USER .
+chmod +x deploy/*.sh
+```
+
+**Container Fails to Start**
+```bash
+# Check logs
+docker-compose logs app
+
+# Check health status
+curl http://localhost:3000/api/health
+
+# Check resource usage
+docker stats
+```
+
+**Database Connection Issues**
+```bash
+# Check MySQL container
+docker-compose logs mysql
+
+# Connect to database manually
+docker exec -it mysql mysql -u root -p
+
+# Check network connectivity
+docker network ls
+docker network inspect emotion-stress_app-network
+```
+
+**Redis Connection Issues**
+```bash
+# Check Redis container
+docker-compose logs redis
+
+# Test Redis connection
+docker exec -it redis redis-cli ping
+```
+
+### CI/CD Pipeline Issues
+
+**GitHub Actions Fails on Build**
+```yaml
+# Check build context
+- name: Debug build context
+  run: |
+    ls -la
+    docker buildx imagetools inspect ghcr.io/username/emotion-stress-detection:latest
+```
+
+**Security Scan Findings**
+```bash
+# Run security scan locally
+docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+  aquasec/trivy:latest image ghcr.io/username/emotion-stress-detection:latest
+
+# Update dependencies to fix vulnerabilities
+pnpm update
+pip install --upgrade -r requirements.txt
+```
+
+### Performance Issues
+
+**High Memory Usage**
+```bash
+# Check container resource usage
+docker stats
+
+# Optimize memory limits
+# Update docker-compose.yml:
+services:
+  app:
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+```
+
+**Slow API Response Times**
+```bash
+# Check application logs
+docker-compose logs app | grep "slow"
+
+# Monitor with Prometheus
+curl http://localhost:9090/metrics
+
+# Check database performance
+docker exec -it mysql mysql -e "SHOW PROCESSLIST;"
+```
+
+### Health Check Issues
+
+**Health Check Fails**
+```bash
+# Test health endpoint manually
+curl -v http://localhost:3000/api/health
+
+# Check individual components
+curl http://localhost:3000/api/health/database
+curl http://localhost:3000/api/health/redis
+```
+
+**Container Restarts Continuously**
+```bash
+# Check exit reason
+docker inspect container-name | grep -A 10 "State"
+
+# Enable debug logging
+docker-compose -f docker-compose.dev.yml up app
+```
+
+### Development Environment Issues
+
+**Hot Reloading Not Working**
+```bash
+# Check volume mounts
+docker-compose -f docker-compose.dev.yml config
+
+# Rebuild with no cache
+docker-compose -f docker-compose.dev.yml build --no-cache
+```
+
+**Port Conflicts**
+```bash
+# Find what's using the port
+lsof -i :3000
+
+# Kill the process
+kill -9 <PID>
+
+# Or use different port
+PORT=3001 docker-compose up
+```
+
+### Monitoring Issues
+
+**Grafana Can't Connect to Prometheus**
+```bash
+# Check Prometheus
+curl http://localhost:9090/api/v1/query?query=up
+
+# Check network
+docker network ls
+docker network inspect emotion-stress-network
+```
+
+**Missing Metrics**
+```bash
+# Check metrics endpoint
+curl http://localhost:3000/metrics
+
+# Verify Prometheus configuration
+curl http://localhost:9090/api/v1/targets
+```
+
+### SSL/TLS Issues
+
+**SSL Certificate Errors**
+```bash
+# Check certificate validity
+openssl s_client -connect your-domain.com:443 -servername your-domain.com
+
+# Renew Let's Encrypt certificates
+docker exec -it emotion-stress-traefik certbot renew
+```
+
+### Deployment Rollback
+
+**Emergency Rollback**
+```bash
+# Quick rollback to previous version
+./deploy/update-stack.sh --rollback
+
+# Or manually deploy previous image
+./deploy/update-stack.sh -i ghcr.io/username/emotion-stress-detection:v1.1.0
+```
+
+**Blue-Green Deployment Issues**
+```bash
+# Check both environments
+curl http://green.your-domain.com/health
+curl http://blue.your-domain.com/health
+
+# Switch traffic back if needed
+./deploy/update-stack.sh --rollback
+```
+
+### Log Analysis
+
+**Debug Application Issues**
+```bash
+# Follow logs in real-time
+docker-compose logs -f app
+
+# Filter logs by level
+docker-compose logs app | grep ERROR
+
+# Check specific time range
+docker-compose logs --since="2024-01-01T00:00:00" app
+```
+
+**System Resource Monitoring**
+```bash
+# Check disk space
+df -h
+
+# Check memory usage
+free -h
+
+# Check Docker system usage
+docker system df
+docker system events
+```
+
+### Getting Help
+
+1. **Check Documentation**: Review this guide and API documentation
+2. **GitHub Issues**: Check existing issues or create new ones
+3. **Logs**: Always check application and system logs first
+4. **Health Checks**: Use health endpoints to diagnose issues
+5. **Community**: Ask questions in discussions or forums
+
+### Emergency Procedures
+
+**Complete System Failure**
+1. Check all container status: `docker-compose ps`
+2. Verify system resources: `df -h` and `free -h`
+3. Check external dependencies: network, DNS, storage
+4. Restart services: `docker-compose restart`
+5. Restore from backup if needed
+
+**Security Incident**
+1. Isolate affected systems
+2. Review access logs
+3. Update passwords and secrets
+4. Rebuild and redeploy with latest security patches
+5. Monitor for suspicious activity
+
+---
+
 **Last Updated**: November 2024
-**Version**: 1.0.0
+**Current Version**: CURRENT_VERSION
+
+**Quick Links:**
+- [API Documentation](./API_DOCUMENTATION.md)
+- [Testing Guide](./TESTING.md)
+- [GitHub Repository](https://github.com/username/emotion-stress-detection)
