@@ -17,6 +17,7 @@ import {
   getLivenessStatus,
   getReadinessStatus,
 } from "../src/health";
+import { gracefulShutdown, setupGracefulShutdown } from "../src/shutdown";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
