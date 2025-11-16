@@ -58,7 +58,7 @@ jobs:
         run: npm run check
 
       - name: Run unit tests
-        run: pnpm run test
+        run: npm run test
 
       - name: Run Python tests
         run: |
