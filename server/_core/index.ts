@@ -7,6 +7,16 @@ import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
+import {
+  getHealthStatus,
+  getDatabaseHealth,
+  getRedisHealth,
+  getStorageHealth,
+  getMLHealth,
+  getWebSocketHealth,
+  getLivenessStatus,
+  getReadinessStatus,
+} from "../src/health";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
