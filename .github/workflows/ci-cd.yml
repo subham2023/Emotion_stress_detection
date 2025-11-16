@@ -37,7 +37,7 @@ jobs:
           cache: 'pip'
 
       - name: Install Node.js dependencies
-        run: npm ci
+        run: npm ci --legacy-peer-deps
 
       - name: Install Python dependencies
         run: |
