@@ -135,7 +135,9 @@ class FaceDetector:
             self.detector = MTCNN()
             logger.info("MTCNN detector initialized successfully")
         except ImportError:
-            raise PreprocessingError("MTCNN not installed. Install with: pip install mtcnn")
+            raise PreprocessingError(
+                "MTCNN not installed. Install with: pip install mtcnn"
+            )
 
     def detect_faces(self, image: np.ndarray) -> List[Tuple[int, int, int, int]]:
         """
@@ -436,7 +438,9 @@ class DataAugmentor:
         return output
 
     @staticmethod
-    def augment_image(image: np.ndarray, augmentation_config: Dict[str, Any]) -> List[np.ndarray]:
+    def augment_image(
+        image: np.ndarray, augmentation_config: Dict[str, Any]
+    ) -> List[np.ndarray]:
         """
         Apply multiple augmentations to image.
 
@@ -575,7 +579,10 @@ class DatasetManager:
                         try:
                             # Preprocess face
                             face_image = self.image_preprocessor.preprocess_face(
-                                image, face_bbox, target_size=target_size, grayscale=grayscale
+                                image,
+                                face_bbox,
+                                target_size=target_size,
+                                grayscale=grayscale,
                             )
 
                             images.append(face_image)
@@ -650,13 +657,21 @@ class DatasetManager:
 
         # Split into train and temp (val + test)
         X_train, X_temp, y_train, y_temp = train_test_split(
-            X, y, test_size=(val_ratio + test_ratio), random_state=random_state, stratify=y
+            X,
+            y,
+            test_size=(val_ratio + test_ratio),
+            random_state=random_state,
+            stratify=y,
         )
 
         # Split temp into val and test
         val_test_ratio = val_ratio / (val_ratio + test_ratio)
         X_val, X_test, y_val, y_test = train_test_split(
-            X_temp, y_temp, test_size=1 - val_test_ratio, random_state=random_state, stratify=y_temp
+            X_temp,
+            y_temp,
+            test_size=1 - val_test_ratio,
+            random_state=random_state,
+            stratify=y_temp,
         )
 
         logger.info(
@@ -742,7 +757,9 @@ def create_sample_dataset(output_dir: str, num_images_per_emotion: int = 10) -> 
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
 
-    logger.info(f"Creating sample dataset with {num_images_per_emotion} images per emotion")
+    logger.info(
+        f"Creating sample dataset with {num_images_per_emotion} images per emotion"
+    )
 
     for emotion in EMOTIONS:
         emotion_dir = output_path / emotion

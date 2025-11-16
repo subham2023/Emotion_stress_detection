@@ -110,11 +110,11 @@ def get_mock_prediction():
         "stress_level": (
             "low"
             if stress_score < 25
-            else "moderate"
-            if stress_score < 50
-            else "high"
-            if stress_score < 75
-            else "critical"
+            else (
+                "moderate"
+                if stress_score < 50
+                else "high" if stress_score < 75 else "critical"
+            )
         ),
         "emotion_probabilities": {k: float(v) for k, v in emotion_probs.items()},
         "faces_detected": 1,
@@ -388,7 +388,10 @@ def handle_end_session(data):
             "session_id": session["session_id"],
             "total_frames": session["frame_count"],
             "dominant_emotion": (
-                max(set(session["emotion_history"]), key=session["emotion_history"].count)
+                max(
+                    set(session["emotion_history"]),
+                    key=session["emotion_history"].count,
+                )
                 if session["emotion_history"]
                 else None
             ),
@@ -398,14 +401,10 @@ def handle_end_session(data):
                 else None
             ),
             "max_stress": (
-                np.max(session["stress_history"])
-                if session["stress_history"]
-                else None
+                np.max(session["stress_history"]) if session["stress_history"] else None
             ),
             "min_stress": (
-                np.min(session["stress_history"])
-                if session["stress_history"]
-                else None
+                np.min(session["stress_history"]) if session["stress_history"] else None
             ),
         }
 

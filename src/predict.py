@@ -163,7 +163,8 @@ class EmotionPredictor:
                         "face_index": face_idx,
                         "bbox": face_bbox,
                         "emotion_probabilities": {
-                            EMOTIONS[i]: float(emotion_probs[i]) for i in range(len(EMOTIONS))
+                            EMOTIONS[i]: float(emotion_probs[i])
+                            for i in range(len(EMOTIONS))
                         },
                         "dominant_emotion": EMOTIONS[dominant_emotion_idx],
                         "confidence": confidence,
@@ -279,7 +280,8 @@ class EmotionPredictor:
                         "face_index": face_idx,
                         "bbox": face_bbox,
                         "emotion_probabilities": {
-                            EMOTIONS[i]: float(emotion_probs[i]) for i in range(len(EMOTIONS))
+                            EMOTIONS[i]: float(emotion_probs[i])
+                            for i in range(len(EMOTIONS))
                         },
                         "dominant_emotion": EMOTIONS[dominant_emotion_idx],
                         "confidence": confidence,
@@ -370,7 +372,9 @@ class EmotionPredictor:
 
                     # Visualize if output video requested
                     if out:
-                        vis_frame = self._visualize_predictions(frame, result["results"])
+                        vis_frame = self._visualize_predictions(
+                            frame, result["results"]
+                        )
                         out.write(vis_frame)
 
                     processed_frames += 1
@@ -444,7 +448,9 @@ class EmotionPredictor:
             )
 
             # Draw stress level
-            stress_label = f"Stress: {result['stress_level']} ({result['stress_score']:.1f})"
+            stress_label = (
+                f"Stress: {result['stress_level']} ({result['stress_score']:.1f})"
+            )
             cv2.putText(
                 vis_image,
                 stress_label,

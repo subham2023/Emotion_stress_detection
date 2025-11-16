@@ -109,7 +109,9 @@ class StressAnalyzer:
             # So raw score ranges from -0.8 to 0.95
             min_score = -0.8
             max_score = 0.95
-            normalized_score = ((stress_score - min_score) / (max_score - min_score)) * 100
+            normalized_score = (
+                (stress_score - min_score) / (max_score - min_score)
+            ) * 100
             normalized_score = np.clip(normalized_score, 0, 100)
 
             return float(normalized_score)
@@ -172,7 +174,9 @@ class StressAnalyzer:
         Returns:
             Combined stress score (0-100)
         """
-        combined_score = emotion_stress * emotion_weight + facial_tension * tension_weight
+        combined_score = (
+            emotion_stress * emotion_weight + facial_tension * tension_weight
+        )
         return float(np.clip(combined_score, 0, 100))
 
     def analyze_frame(
@@ -201,7 +205,9 @@ class StressAnalyzer:
             facial_tension = self.calculate_facial_tension(landmarks)
 
             # Calculate combined stress
-            combined_stress = self.calculate_combined_stress(emotion_stress, facial_tension)
+            combined_stress = self.calculate_combined_stress(
+                emotion_stress, facial_tension
+            )
 
             # Get dominant emotion
             dominant_emotion_idx = np.argmax(emotion_probs)
@@ -262,7 +268,9 @@ class StressAnalyzer:
         # Detect trend
         if len(stress_array) >= 2:
             recent_stress = np.mean(stress_array[-5:])
-            older_stress = np.mean(stress_array[:-5]) if len(stress_array) > 5 else stress_array[0]
+            older_stress = (
+                np.mean(stress_array[:-5]) if len(stress_array) > 5 else stress_array[0]
+            )
             trend_diff = recent_stress - older_stress
 
             if trend_diff > 5:
@@ -423,7 +431,9 @@ class StressReportGenerator:
         text.append("=" * 80)
 
         # Session info
-        text.append(f"\nSession Duration: {report['session_duration_seconds']:.1f} seconds")
+        text.append(
+            f"\nSession Duration: {report['session_duration_seconds']:.1f} seconds"
+        )
         text.append(f"Total Frames: {report['total_frames']}")
 
         # Statistics

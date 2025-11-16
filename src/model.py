@@ -121,7 +121,11 @@ class CustomCNNModel:
 
     @staticmethod
     def build(
-        input_shape: Tuple[int, int, int] = (IMAGE_SIZE_SMALL[0], IMAGE_SIZE_SMALL[1], IMAGE_CHANNELS),
+        input_shape: Tuple[int, int, int] = (
+            IMAGE_SIZE_SMALL[0],
+            IMAGE_SIZE_SMALL[1],
+            IMAGE_CHANNELS,
+        ),
         num_classes: int = NUM_CLASSES,
         l2_reg: float = 0.001,
     ) -> keras.Model:
@@ -253,7 +257,11 @@ class TransferLearningModel:
 
     @staticmethod
     def build_resnet50(
-        input_shape: Tuple[int, int, int] = (IMAGE_SIZE_LARGE[0], IMAGE_SIZE_LARGE[1], IMAGE_CHANNELS_RGB),
+        input_shape: Tuple[int, int, int] = (
+            IMAGE_SIZE_LARGE[0],
+            IMAGE_SIZE_LARGE[1],
+            IMAGE_CHANNELS_RGB,
+        ),
         num_classes: int = NUM_CLASSES,
         freeze_base: bool = True,
     ) -> keras.Model:
@@ -304,7 +312,11 @@ class TransferLearningModel:
 
     @staticmethod
     def build_mobilenetv2(
-        input_shape: Tuple[int, int, int] = (IMAGE_SIZE_LARGE[0], IMAGE_SIZE_LARGE[1], IMAGE_CHANNELS_RGB),
+        input_shape: Tuple[int, int, int] = (
+            IMAGE_SIZE_LARGE[0],
+            IMAGE_SIZE_LARGE[1],
+            IMAGE_CHANNELS_RGB,
+        ),
         num_classes: int = NUM_CLASSES,
         freeze_base: bool = True,
     ) -> keras.Model:
@@ -355,7 +367,11 @@ class TransferLearningModel:
 
     @staticmethod
     def build_vgg16(
-        input_shape: Tuple[int, int, int] = (IMAGE_SIZE_LARGE[0], IMAGE_SIZE_LARGE[1], IMAGE_CHANNELS_RGB),
+        input_shape: Tuple[int, int, int] = (
+            IMAGE_SIZE_LARGE[0],
+            IMAGE_SIZE_LARGE[1],
+            IMAGE_CHANNELS_RGB,
+        ),
         num_classes: int = NUM_CLASSES,
         freeze_base: bool = True,
     ) -> keras.Model:
@@ -453,7 +469,9 @@ class ModelManager:
                 metrics=["accuracy", keras.metrics.Precision(), keras.metrics.Recall()],
             )
 
-            logger.info(f"Model compiled with optimizer={optimizer}, lr={learning_rate}")
+            logger.info(
+                f"Model compiled with optimizer={optimizer}, lr={learning_rate}"
+            )
             return model
 
         except Exception as e:
@@ -543,7 +561,9 @@ class ModelManager:
             Dictionary with parameter counts
         """
         total_params = model.count_params()
-        trainable_params = sum([tf.keras.backend.count_params(w) for w in model.trainable_weights])
+        trainable_params = sum(
+            [tf.keras.backend.count_params(w) for w in model.trainable_weights]
+        )
         non_trainable_params = total_params - trainable_params
 
         return {
@@ -616,25 +636,39 @@ def create_model(
         if model_type == "custom_cnn":
             if input_shape is None:
                 input_shape = (IMAGE_SIZE_SMALL[0], IMAGE_SIZE_SMALL[1], IMAGE_CHANNELS)
-            model = CustomCNNModel.build(input_shape=input_shape, num_classes=num_classes)
+            model = CustomCNNModel.build(
+                input_shape=input_shape, num_classes=num_classes
+            )
 
         elif model_type == "resnet50":
             if input_shape is None:
-                input_shape = (IMAGE_SIZE_LARGE[0], IMAGE_SIZE_LARGE[1], IMAGE_CHANNELS_RGB)
+                input_shape = (
+                    IMAGE_SIZE_LARGE[0],
+                    IMAGE_SIZE_LARGE[1],
+                    IMAGE_CHANNELS_RGB,
+                )
             model = TransferLearningModel.build_resnet50(
                 input_shape=input_shape, num_classes=num_classes
             )
 
         elif model_type == "mobilenetv2":
             if input_shape is None:
-                input_shape = (IMAGE_SIZE_LARGE[0], IMAGE_SIZE_LARGE[1], IMAGE_CHANNELS_RGB)
+                input_shape = (
+                    IMAGE_SIZE_LARGE[0],
+                    IMAGE_SIZE_LARGE[1],
+                    IMAGE_CHANNELS_RGB,
+                )
             model = TransferLearningModel.build_mobilenetv2(
                 input_shape=input_shape, num_classes=num_classes
             )
 
         elif model_type == "vgg16":
             if input_shape is None:
-                input_shape = (IMAGE_SIZE_LARGE[0], IMAGE_SIZE_LARGE[1], IMAGE_CHANNELS_RGB)
+                input_shape = (
+                    IMAGE_SIZE_LARGE[0],
+                    IMAGE_SIZE_LARGE[1],
+                    IMAGE_CHANNELS_RGB,
+                )
             model = TransferLearningModel.build_vgg16(
                 input_shape=input_shape, num_classes=num_classes
             )
@@ -647,9 +681,11 @@ def create_model(
 
         # Log model info
         params = ModelManager.count_parameters(model)
-        logger.info(f"Model parameters - Total: {params['total']:,}, "
-                   f"Trainable: {params['trainable']:,}, "
-                   f"Non-trainable: {params['non_trainable']:,}")
+        logger.info(
+            f"Model parameters - Total: {params['total']:,}, "
+            f"Trainable: {params['trainable']:,}, "
+            f"Non-trainable: {params['non_trainable']:,}"
+        )
 
         return model
 

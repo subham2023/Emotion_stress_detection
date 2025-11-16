@@ -138,7 +138,9 @@ class PerformanceMonitor(Callback):
         else:
             self.wait += 1
             if self.wait >= self.patience:
-                logger.warning(f"No improvement for {self.patience} epochs, stopping training")
+                logger.warning(
+                    f"No improvement for {self.patience} epochs, stopping training"
+                )
                 self.model.stop_training = True
 
 
@@ -209,8 +211,10 @@ class DataGeneratorManager:
         X_val: np.ndarray,
         y_val: np.ndarray,
         batch_size: int = BATCH_SIZE,
-    ) -> Tuple[tf.keras.preprocessing.image.ImageDataGenerator,
-               tf.keras.preprocessing.image.ImageDataGenerator]:
+    ) -> Tuple[
+        tf.keras.preprocessing.image.ImageDataGenerator,
+        tf.keras.preprocessing.image.ImageDataGenerator,
+    ]:
         """
         Create both training and validation generators.
 
@@ -301,7 +305,9 @@ class TrainingManager:
             verbose=1,
         )
         callbacks.append(early_stopping_callback)
-        logger.info(f"Early stopping callback created (patience={EARLY_STOPPING_PATIENCE})")
+        logger.info(
+            f"Early stopping callback created (patience={EARLY_STOPPING_PATIENCE})"
+        )
 
         # Reduce learning rate on plateau
         reduce_lr_callback = ReduceLROnPlateau(
@@ -312,7 +318,9 @@ class TrainingManager:
             verbose=1,
         )
         callbacks.append(reduce_lr_callback)
-        logger.info(f"ReduceLROnPlateau callback created (patience={REDUCE_LR_PATIENCE})")
+        logger.info(
+            f"ReduceLROnPlateau callback created (patience={REDUCE_LR_PATIENCE})"
+        )
 
         # TensorBoard
         if enable_tensorboard:
@@ -457,7 +465,9 @@ class TrainingManager:
                 "loss": [float(x) for x in history.history.get("loss", [])],
                 "accuracy": [float(x) for x in history.history.get("accuracy", [])],
                 "val_loss": [float(x) for x in history.history.get("val_loss", [])],
-                "val_accuracy": [float(x) for x in history.history.get("val_accuracy", [])],
+                "val_accuracy": [
+                    float(x) for x in history.history.get("val_accuracy", [])
+                ],
             }
 
             with open(output_path, "w") as f:

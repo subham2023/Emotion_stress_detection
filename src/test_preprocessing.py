@@ -59,7 +59,9 @@ def test_face_detector():
             faces = detector_haar.detect_faces(test_image)
             logger.info(f"✓ Detected {len(faces)} face(s)")
         except NoFaceDetectedError:
-            logger.warning("No faces detected in test image (expected for simple pattern)")
+            logger.warning(
+                "No faces detected in test image (expected for simple pattern)"
+            )
 
         logger.info("✓ Face detector test passed\n")
 
@@ -90,12 +92,16 @@ def test_image_preprocessor():
 
         # Test face preprocessing
         face_bbox = (50, 50, 100, 100)
-        face = preprocessor.preprocess_face(test_image, face_bbox, target_size=IMAGE_SIZE_SMALL)
+        face = preprocessor.preprocess_face(
+            test_image, face_bbox, target_size=IMAGE_SIZE_SMALL
+        )
         assert face.shape == (48, 48), f"Expected shape (48, 48), got {face.shape}"
         logger.info(f"✓ Face preprocessing works (output shape: {face.shape})")
 
         # Test histogram equalization
-        gray_image = cv2.cvtColor(test_image, cv2.COLOR_BGR2GRAY).astype(np.float32) / 255.0
+        gray_image = (
+            cv2.cvtColor(test_image, cv2.COLOR_BGR2GRAY).astype(np.float32) / 255.0
+        )
         equalized = preprocessor.equalize_histogram(gray_image)
         assert equalized.shape == gray_image.shape, "Equalized image shape mismatch"
         logger.info("✓ Histogram equalization works")
@@ -182,7 +188,9 @@ def test_dataset_manager():
             X, y, train_ratio=0.8, val_ratio=0.1, test_ratio=0.1
         )
 
-        assert X_train.shape[0] == 80, f"Expected 80 train samples, got {X_train.shape[0]}"
+        assert (
+            X_train.shape[0] == 80
+        ), f"Expected 80 train samples, got {X_train.shape[0]}"
         assert X_val.shape[0] == 10, f"Expected 10 val samples, got {X_val.shape[0]}"
         assert X_test.shape[0] == 10, f"Expected 10 test samples, got {X_test.shape[0]}"
         logger.info(f"✓ Dataset splitting works")
@@ -192,7 +200,9 @@ def test_dataset_manager():
         logger.info(f"✓ Dataset saved to {PROCESSED_DATA_DIR}")
 
         # Test dataset loading
-        X_loaded, y_loaded = DatasetManager.load_dataset(str(PROCESSED_DATA_DIR), name="test")
+        X_loaded, y_loaded = DatasetManager.load_dataset(
+            str(PROCESSED_DATA_DIR), name="test"
+        )
         assert X_loaded.shape == X.shape, "Loaded dataset shape mismatch"
         assert y_loaded.shape == y.shape, "Loaded labels shape mismatch"
         logger.info(f"✓ Dataset loading works")
