@@ -230,8 +230,8 @@ cp config/development.env .env.dev
 - `AWS_REGION` - AWS region
 
 **Authentication:**
-- `MANUS_CLIENT_ID` - Manus OAuth client ID
-- `MANUS_CLIENT_SECRET` - Manus OAuth client secret
+- `JWT_SECRET` - JWT secret for session tokens
+- `SESSION_SECRET` - Session secret for cookies
 
 **Monitoring:**
 - `GRAFANA_PASSWORD` - Grafana admin password
