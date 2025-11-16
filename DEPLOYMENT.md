@@ -1,17 +1,23 @@
-# Deployment & Optimization Guide
+# Docker & CI/CD Deployment Guide
 
-Complete guide for deploying the Emotion Stress Detection System to production with optimization strategies.
+Complete guide for deploying the Emotion Stress Detection System using Docker containers and CI/CD pipelines.
 
 ## Table of Contents
 
 1. [Pre-Deployment Checklist](#pre-deployment-checklist)
-2. [Model Optimization](#model-optimization)
-3. [Docker Deployment](#docker-deployment)
-4. [Cloud Deployment](#cloud-deployment)
-5. [Performance Optimization](#performance-optimization)
-6. [Monitoring & Logging](#monitoring--logging)
-7. [Scaling Strategies](#scaling-strategies)
-8. [Security Hardening](#security-hardening)
+2. [Docker Containerization](#docker-containerization)
+3. [Environment Configuration](#environment-configuration)
+4. [Local Development Setup](#local-development-setup)
+5. [Docker Swarm Deployment](#docker-swarm-deployment)
+6. [CI/CD Pipeline](#cicd-pipeline)
+7. [Health Monitoring](#health-monitoring)
+8. [Model Optimization](#model-optimization)
+9. [Cloud Deployment](#cloud-deployment)
+10. [Performance Optimization](#performance-optimization)
+11. [Monitoring & Logging](#monitoring--logging)
+12. [Scaling Strategies](#scaling-strategies)
+13. [Security Hardening](#security-hardening)
+14. [Troubleshooting](#troubleshooting)
 
 ---
 
