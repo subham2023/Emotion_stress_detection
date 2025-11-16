@@ -80,8 +80,20 @@ async function startServer() {
     console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
   }
 
+  // Set up graceful shutdown
+  setupGracefulShutdown(server, {
+    timeout: parseInt(process.env.SHUTDOWN_TIMEOUT || "30000"),
+    cleanupTasks: [
+      async () => {
+        console.log("Cleaning up application resources...");
+        // Add application-specific cleanup here
+      },
+    ],
+  });
+
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
+    console.log("Graceful shutdown handlers registered");
   });
 }
 
