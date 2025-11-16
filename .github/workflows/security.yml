@@ -1,0 +1,313 @@
+name: Security Scanning
+
+on:
+  schedule:
+    # Run weekly on Sunday at 2 AM UTC
+    - cron: '0 2 * * 0'
+  workflow_dispatch:
+  push:
+    paths:
+      - 'package.json'
+      - 'requirements.txt'
+      - 'Dockerfile*'
+  pull_request:
+    paths:
+      - 'package.json'
+      - 'requirements.txt'
+      - 'Dockerfile*'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: emotion-stress-detection
+
+jobs:
+  container-security-scan:
+    name: Container Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Docker image for scanning
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          load: true
+          tags: ${{ env.IMAGE_NAME }}:scan
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.IMAGE_NAME }}:scan
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+      - name: Generate security report
+        run: |
+          echo "# Security Scan Report" > security-report.md
+          echo "## Container Vulnerabilities" >> security-report.md
+          if [ -f trivy-results.sarif ]; then
+            echo "Trivy scan completed. Check Security tab for details." >> security-report.md
+          else
+            echo "No security findings detected." >> security-report.md
+          fi
+          echo "" >> security-report.md
+          echo "**Scan Date:** $(date)" >> security-report.md
+
+      - name: Create issue for critical vulnerabilities
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🚨 Critical Security Vulnerabilities Detected',
+              body: `Critical security vulnerabilities were detected in the container image.
+
+**Scan Details:**
+- Date: ${new Date().toISOString()}
+- Trigger: ${{ github.event_name }}
+- Commit: ${{ github.sha }}
+
+**Next Steps:**
+1. Review the Security tab for detailed findings
+2. Update vulnerable dependencies
+3. Rebuild and rescan the image
+4. Deploy patched version
+
+Please address these vulnerabilities promptly.`,
+              labels: ['security', 'critical', 'automated']
+            })
+
+  dependency-security-scan:
+    name: Dependency Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10.4.1
+
+      - name: Install Node.js dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install safety bandit
+
+      - name: Run npm audit
+        run: npm audit --audit-level moderate --json > npm-audit.json || true
+
+      - name: Run Python safety check
+        run: safety check --json --output safety-report.json || true
+
+      - name: Run Python security scan
+        run: bandit -r src/ -f json -o bandit-report.json || true
+
+      - name: Summarize security findings
+        run: |
+          echo "# Dependency Security Report" > dependency-security-report.md
+          echo "## npm Dependencies" >> dependency-security-report.md
+          if [ -f npm-audit.json ]; then
+            echo "- npm audit completed" >> dependency-security-report.md
+          fi
+          echo "" >> dependency-security-report.md
+          echo "## Python Dependencies" >> dependency-security-report.md
+          if [ -f safety-report.json ]; then
+            echo "- Safety check completed" >> dependency-security-report.md
+          fi
+          if [ -f bandit-report.json ]; then
+            echo "- Bandit security scan completed" >> dependency-security-report.md
+          fi
+          echo "" >> dependency-security-report.md
+          echo "**Scan Date:** $(date)" >> dependency-security-report.md
+
+      - name: Check for high-severity issues
+        run: |
+          # Check for high severity npm issues
+          if [ -f npm-audit.json ]; then
+            HIGH_VULNS=$(jq -r '.vulnerabilities | to_entries[] | select(.value.severity == "high") | .key' npm-audit.json | wc -l)
+            if [ "$HIGH_VULNS" -gt 0 ]; then
+              echo "::error::Found $HIGH_VULNS high-severity npm vulnerabilities"
+              exit 1
+            fi
+          fi
+
+          # Check for critical safety issues
+          if [ -f safety-report.json ]; then
+            CRITICAL_VULNS=$(jq -r '.vulnerabilities | length' safety-report.json)
+            if [ "$CRITICAL_VULNS" -gt 0 ]; then
+              echo "::error::Found $CRITICAL_VULNS critical Python security issues"
+              exit 1
+            fi
+          fi
+
+  secrets-scan:
+    name: Secrets Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run TruffleHog OSS
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: main
+          head: HEAD
+          extra_args: --debug --only-verified
+
+      - name: Scan for exposed credentials
+        run: |
+          # Basic pattern scanning for common credential patterns
+          echo "Scanning for exposed credentials..."
+
+          # Check for common patterns
+          if grep -r -i -E "(password|passwd|pwd|secret|key|token)\s*[=:]\s*['\"][^'\"]{8,}['\"]" --exclude-dir=node_modules --exclude-dir=.git .; then
+            echo "::warning::Potential hardcoded credentials found"
+            exit 1
+          fi
+
+          if grep -r -E "AKIA[0-9A-Z]{16}" --exclude-dir=node_modules --exclude-dir=.git .; then
+            echo "::warning::Potential AWS access key found"
+            exit 1
+          fi
+
+  code-quality-security:
+    name: Code Quality Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10.4.1
+
+      - name: Install dependencies
+        run: |
+          pnpm install --frozen-lockfile
+          pip install bandit semgrep
+
+      - name: Run ESLint security rules
+        run: |
+          npx eslint . --ext .js,.jsx,.ts,.tsx \
+            --config '{"extends": ["plugin:security/recommended"]}' \
+            --format=json > eslint-security-report.json || true
+
+      - name: Run Semgrep security scan
+        run: |
+          semgrep --config=auto --json --output=semgrep-report.json . || true
+
+      - name: Run Python security linters
+        run: |
+          bandit -r src/ -f json -o bandit-code-quality.json || true
+
+      - name: Upload security scan results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-scan-reports
+          path: |
+            trivy-results.sarif
+            npm-audit.json
+            safety-report.json
+            bandit-report.json
+            eslint-security-report.json
+            semgrep-report.json
+            security-report.md
+            dependency-security-report.md
+          retention-days: 30
+
+      - name: Create security summary
+        if: always()
+        run: |
+          echo "## Security Scan Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Scan Type | Status | Issues Found |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|--------------|" >> $GITHUB_STEP_SUMMARY
+
+          if [ -f trivy-results.sarif ]; then
+            echo "| Container Scan | ✅ | See Security tab |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Container Scan | ❌ | Failed to run |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ -f npm-audit.json ]; then
+            echo "| npm Dependencies | ✅ | Completed |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| npm Dependencies | ❌ | Failed to run |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ -f safety-report.json ]; then
+            echo "| Python Dependencies | ✅ | Completed |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Python Dependencies | ❌ | Failed to run |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ -f bandit-report.json ]; then
+            echo "| Python Code Security | ✅ | Completed |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Python Code Security | ❌ | Failed to run |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Report Date:** $(date)" >> $GITHUB_STEP_SUMMARY
