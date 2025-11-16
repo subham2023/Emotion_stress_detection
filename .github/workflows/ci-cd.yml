@@ -46,7 +46,7 @@ jobs:
           pip install pytest pytest-cov black flake8 pylint
 
       - name: Run linting (JavaScript/TypeScript)
-        run: pnpm run lint || true
+        run: npm run lint || true
 
       - name: Run linting (Python)
         run: |
